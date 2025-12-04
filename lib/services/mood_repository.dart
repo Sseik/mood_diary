@@ -10,6 +10,44 @@ class MoodRepository {
   final _auth = FirebaseAuth.instance;
   final _store = FirebaseFirestore.instance;
   final String collectionPath = 'mood_entries';
+  final storage = FirebaseStorage.instance;
+
+  Future<void> updateMoodEntry(
+      MoodEntry entry,
+      [List<XFile>? newImages, List<String>? deletedImages]
+      ) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null || entry.id == null) return;
+
+    List<String> finalPhotoUrls = List.from(entry.photoUrls ?? []);
+
+    if (newImages != null && newImages.isNotEmpty) {
+      for (var image in newImages) {
+        String fileName = '${DateTime.now().millisecondsSinceEpoch}_${image.name}';
+        Reference ref = storage.ref().child('mood_photos').child(currentUser.uid).child(fileName);
+
+        try {
+          if (kIsWeb) {
+            Uint8List imageBytes = await image.readAsBytes();
+            await ref.putData(imageBytes, SettableMetadata(contentType: 'image/jpeg'));
+          } else {
+            await ref.putFile(File(image.path));
+          }
+          String downloadUrl = await ref.getDownloadURL();
+          finalPhotoUrls.add(downloadUrl); // Додаємо новий URL
+        } catch (e) {
+          print("Error uploading new image: $e");
+        }
+      }
+    }
+
+    await _store.collection(collectionPath).doc(entry.id).update({
+      'emoji': entry.emoji,
+      'score': entry.score,
+      'note': entry.note,
+      'photoUrls': finalPhotoUrls,
+    });
+  }
 
   Future<void> addMoodEntry(MoodEntry entry, [List<XFile>? images]) async {
     final currentUser = _auth.currentUser;

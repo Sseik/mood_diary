@@ -54,6 +54,18 @@ class MoodBloc extends Bloc<MoodEvent, MoodState> {
         emit(MoodLoadError(e.toString()));
       }
     });
+
+    on<UpdateMoodEntryEvent>((event, emit) async {
+      try {
+        await repository.updateMoodEntry(
+          event.entry,
+          event.newImages,
+          event.deletedImageUrls,
+        );
+      } catch (e) {
+        print("Error updating entry: $e");
+      }
+    });
   }
 
   @override

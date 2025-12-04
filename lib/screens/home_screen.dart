@@ -102,7 +102,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     note: entry.note,
                     score: entry.score.toString(),
                     onEdit: () {
-                      // Логіка редагування (поки пуста)
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AddMoodScreen(entryToEdit: entry),
+                        ),
+                      );
                     },
                     onDelete: () {
                       showDeleteConfirmationDialog(context, entry.id!);

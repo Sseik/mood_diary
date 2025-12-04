@@ -26,3 +26,15 @@ class DeleteMoodEntryEvent extends MoodEvent {
   final String id;
   DeleteMoodEntryEvent({required this.id});
 }
+
+class UpdateMoodEntryEvent extends MoodEvent {
+  final MoodEntry entry;
+  final List<XFile>? newImages;      // Нові фото для завантаження
+  final List<String>? deletedImageUrls; // Список URL для видалення
+
+  UpdateMoodEntryEvent({
+    required this.entry,
+    this.newImages,
+    this.deletedImageUrls,
+  });
+}

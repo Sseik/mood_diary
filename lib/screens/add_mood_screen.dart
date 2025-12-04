@@ -13,7 +13,9 @@ import 'package:mood_diary/widgets/custom_text_field.dart';
 import 'package:flutter/foundation.dart';
 
 class AddMoodScreen extends StatefulWidget {
-  const AddMoodScreen({Key? key}) : super(key: key);
+  final MoodEntry? entryToEdit;
+
+  const AddMoodScreen({Key? key, this.entryToEdit}) : super(key: key);
 
   @override
   State<AddMoodScreen> createState() => _AddMoodScreenState();
@@ -32,35 +34,61 @@ class _AddMoodScreenState extends State<AddMoodScreen> {
   ];
   final imagePicker = ImagePicker();
   List<XFile> selectedImages = [];
+  List<String> _existingPhotoUrls = []; // Ті, що прийшли з бази
+  List<String> _deletedPhotoUrls = [];  // Ті, що треба видалити
+  List<XFile> _newSelectedImages = [];  // Ті, що вибрали зараз (перейменував selectedImages для ясності)
 
   Future<void> pickImages() async {
     final List<XFile> images = await imagePicker.pickMultiImage();
-
-    if(images.isNotEmpty) {
+    if (images.isNotEmpty) {
       setState(() {
-        selectedImages.addAll(images);
+        _newSelectedImages.addAll(images);
       });
     }
   }
 
   void saveEntry() {
-    final newEntry = MoodEntry(
-        userId: '',
-        date: DateTime.now(),
-        emoji: selectedEmoji,
-        score: currentSliderValue.round(),
-        note: noteController.text,
-        photoUrls: [],
+    final entry = MoodEntry(
+      id: widget.entryToEdit?.id,
+      userId: widget.entryToEdit?.userId ?? '',
+      date: widget.entryToEdit?.date ?? DateTime.now(),
+      emoji: selectedEmoji,
+      score: currentSliderValue.round(),
+      note: noteController.text,
+      // Тут ми передаємо старі фото, мінус видалені.
+      // Нові фото додадуться вже в репозиторії.
+      photoUrls: _existingPhotoUrls,
     );
 
-    context.read<MoodBloc>().add(
-        AddMoodEntryEvent(
-            entry: newEntry,
-            localImages: selectedImages,
-        )
-    );
-
+    if (widget.entryToEdit == null) {
+      context.read<MoodBloc>().add(
+          AddMoodEntryEvent(entry: entry, localImages: _newSelectedImages)
+      );
+    } else {
+      // ПЕРЕДАЄМО ВСЕ В ПОДІЮ ОНОВЛЕННЯ
+      context.read<MoodBloc>().add(
+          UpdateMoodEntryEvent(
+            entry: entry,
+            newImages: _newSelectedImages,
+            deletedImageUrls: _deletedPhotoUrls,
+          )
+      );
+    }
     Navigator.pop(context);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.entryToEdit != null) {
+      final e = widget.entryToEdit!;
+      currentSliderValue = e.score.toDouble();
+      selectedEmoji = e.emoji;
+      noteController.text = e.note ?? '';
+
+      // Завантажуємо існуючі URL
+      if (e.photoUrls != null) _existingPhotoUrls = List.from(e.photoUrls!);
+    }
   }
 
   @override
@@ -174,59 +202,75 @@ class _AddMoodScreenState extends State<AddMoodScreen> {
                 controller: noteController,
               ),
             ),
-            if (selectedImages.isNotEmpty)
+            if (_existingPhotoUrls.isNotEmpty || _newSelectedImages.isNotEmpty)
               Container(
-                margin: EdgeInsets.all(20),
-                child: SizedBox(
-                  height: 100,
-                  child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: selectedImages.length,
-                      itemBuilder: (context, index) {
-                        return Padding(
-                            padding: EdgeInsets.only(right: 8.0),
-                            child: Stack(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: kIsWeb ?
-                                      Image.network(
-                                        selectedImages[index].path,
-                                        width: 100,
-                                        height: 100,
-                                        fit: BoxFit.cover,
-                                      )
-                                    : Image.file(
-                                      File(selectedImages[index].path),
-                                      width: 100,
-                                      height: 100,
-                                      fit: BoxFit.cover,
-                                  ),
+                margin: const EdgeInsets.all(20),
+                height: 100,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    // 1. СТАРІ ФОТО (URL)
+                    ..._existingPhotoUrls.map((url) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(url, width: 100, height: 100, fit: BoxFit.cover),
+                            ),
+                            // Кнопка видалення
+                            Positioned(
+                              right: 0, top: 0,
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _existingPhotoUrls.remove(url); // Прибираємо з екрана
+                                    _deletedPhotoUrls.add(url);     // Додаємо в список на видалення
+                                  });
+                                },
+                                child: Container(
+                                  color: Colors.black54,
+                                  child: const Icon(Icons.close, color: Colors.white, size: 20),
                                 ),
-                                Positioned(
-                                    right: 0,
-                                    top: 0,
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          selectedImages.removeAt(index);
-                                        });
-                                      },
-                                      child: Container(
-                                        color: Colors.black54,
-                                        child: const Icon(
-                                          Icons.close,
-                                          color: Colors.white,
-                                          size: 20,
-                                        ),
-                                      ),
-                                    )
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+
+                    // 2. НОВІ ФОТО (Local File)
+                    ..._newSelectedImages.map((file) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: kIsWeb
+                                  ? Image.network(file.path, width: 100, height: 100, fit: BoxFit.cover)
+                                  : Image.file(File(file.path), width: 100, height: 100, fit: BoxFit.cover),
+                            ),
+                            Positioned(
+                              right: 0, top: 0,
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _newSelectedImages.remove(file); // Просто видаляємо зі списку нових
+                                  });
+                                },
+                                child: Container(
+                                  color: Colors.black54,
+                                  child: const Icon(Icons.close, color: Colors.white, size: 20),
                                 ),
-                              ],
-                            )
-                        );
-                      }
-                  ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ],
                 ),
               ),
             Container(
