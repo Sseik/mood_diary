@@ -1,1 +1,39 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"mood-diary-app-d8828","appId":"1:853313145583:android:b862071020ec7b5cf0291a","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"mood-diary-app-d8828","configurations":{"android":"1:853313145583:android:b862071020ec7b5cf0291a","ios":"1:853313145583:ios:ba017493c36d9cdff0291a","macos":"1:853313145583:ios:ba017493c36d9cdff0291a","web":"1:853313145583:web:22b4f0b240b446a4f0291a","windows":"1:853313145583:web:c7aa640bee771368f0291a"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "mood-diary-app-d8828",
+          "appId": "1:853313145583:android:b862071020ec7b5cf0291a",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "mood-diary-app-d8828",
+          "configurations": {
+            "android": "1:853313145583:android:b862071020ec7b5cf0291a",
+            "ios": "1:853313145583:ios:ba017493c36d9cdff0291a",
+            "macos": "1:853313145583:ios:ba017493c36d9cdff0291a",
+            "web": "1:853313145583:web:22b4f0b240b446a4f0291a",
+            "windows": "1:853313145583:web:c7aa640bee771368f0291a"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
